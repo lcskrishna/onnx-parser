@@ -12,6 +12,28 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+int parseOnnxGraph(const onnx::GraphProto& graph_proto)
+{
+	if(graph_proto.has_name()) {
+		std::cout << "INFO: Creating a network structure for : " << graph_proto.name() << std::endl;
+	}
+
+	for(int i=0; i < graph_proto.node_size(); i++) {
+		const onnx::NodeProto node_proto = graph_proto.node(i);
+		std::cout << "INFO: Layer is : " << node_proto.op_type() << std::endl;
+		
+		for(int j=0; j < node_proto.input_size(); j++) {
+			std::cout << "Input is : " << node_proto.input(j) << std::endl;
+		}
+
+		for(int j=0; j < node_proto.output_size(); j++) {
+			std::cout << "Output is : " << node_proto.output(j) << std::endl;
+		}
+	}
+
+	return 1;
+}
+
 int loadOnnxModelFile(const char * fileName)
 {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
@@ -23,10 +45,25 @@ int loadOnnxModelFile(const char * fileName)
 
         if(isSuccess) {
                 std::cout << "INFO: Sucessfully read onnx model file. " << std::endl;
+		if(model_proto.has_graph()) {
+			std::cout << "DEBUG: Parsing the onnx model." << std::endl;
+			const onnx::GraphProto graph_proto = model_proto.graph();
+			if(parseOnnxGraph(graph_proto) < 0) {
+				std::cout << "ERROR: Unable to parse ONNX model." << std::endl;
+				return -1;
+			}
+		}
+		else {
+			std::cerr << "ERROR: No network structure found." << std::endl;
+			return -1;
+		}
         }
         else {
                 std::cerr << "ERROR: Failed to read the onnx model file. " << std::endl;
+		return -1;
         }
+
+	return 0;
 
 }
 
