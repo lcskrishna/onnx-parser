@@ -84,49 +84,8 @@ int parseOnnxGraph(const onnx::GraphProto& graph_proto)
 		std::cout << "RESULT: Weights and bias extraction successful" << std::endl;
 	}
 
-	/*
-	for(int i=0; i < graph_proto.initializer_size(); i++) {
-		const onnx::TensorProto& tensor_proto = graph_proto.initializer(i);
-		const onnx::TensorProto_DataType& datatype = tensor_proto.data_type();
-		int tensor_size  = 1;
-		for(int j = 0; j < tensor_proto.dims_size(); j++) {
-			tensor_size *= tensor_proto.dims(j);
-			std::cout << tensor_proto.dims(j) << std::endl;
-		}
-
-		std::string fileName_weights = "weights/" + tensor_proto.name() + ".f32";
- 
-		if(datatype == onnx::TensorProto_DataType_FLOAT) {
-			
-			FILE * fs;
-			fs = fopen(fileName_weights.c_str(), "wb");
-			if(!fs) {
-				std::cout << "ERROR: Unable to create a file. " << std::endl;
-			}
-			std::string raw_data_val = tensor_proto.raw_data();
-			const char * val = raw_data_val.c_str();
-			
-			int count = 0;
-			for(int k = 0; k < tensor_size*4 - 4; k+=4) {
-				float weight;
-				char b[] = {val[k], val[k+1], val[k+2], val[k+3]};
-				memcpy(&weight, &b, sizeof(float));
-				fwrite(&weight, sizeof(float), 1, fs);
-				count++;
-			}
-		
-			fclose(fs);
-			std::cout << "INFO: Weights are dumped into the weights folder" << std::endl;
-		}
-		else {
-			std::cout <<"ERROR: Unable to extract the data. Will be supported in future." << std::endl;
-		}
-		
-	}*/
-
-	
-
-	/*
+	//TODO: Extract the network structure and finalize  the GDF.
+/*	
 	for(int i=0; i < graph_proto.node_size(); i++) {
 		const onnx::NodeProto node_proto = graph_proto.node(i);
 		std::cout << "INFO: Layer is : " << node_proto.op_type() << std::endl;
@@ -150,8 +109,8 @@ int parseOnnxGraph(const onnx::GraphProto& graph_proto)
 			
 		}
 	}
-	*/
-
+*/
+	
 	return 0;
 }
 
