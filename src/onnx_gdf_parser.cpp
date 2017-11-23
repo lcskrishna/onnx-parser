@@ -70,6 +70,87 @@ int dumpOnnxModel(const onnx::GraphProto& graph_proto)
 	return 0;
 }
 
+int getLayerParams(const onnx::NodeProto& node_proto, std::string& params)
+{
+	std::string layer_type = node_proto.op_type();
+	
+	if(layer_type == "Conv") {
+		
+		int pad_h, pad_w;
+		int stride_h, stride_w;
+		int kernel_h, kernel_w;
+		int dilation_h = 1, dilation_w = 1;
+				
+		for(int i =0; i < node_proto.attribute_size() ; i++) {
+			const onnx::AttributeProto& attribute_proto = node_proto.attribute(i);
+			std::string attribute_name = attribute_proto.name();
+			
+			if(attribute_name == "strides") {
+				stride_h = attribute_proto.ints(0);
+				stride_w = attribute_proto.ints(1);
+			}
+			else if(attribute_name == "pads") {
+				pad_h = attribute_proto.ints(0);
+				pad_w = attribute_proto.ints(1);
+			}
+			else if(attribute_name == "kernel_shape") {
+				kernel_h = attribute_proto.ints(0);
+				kernel_w = attribute_proto.ints(1);
+			}
+		}
+
+		params = std::to_string(kernel_w)
+			+ " " + std::to_string(kernel_h)
+			+ " " + std::to_string(stride_w)
+			+ " " + std::to_string(stride_h)
+			+ " " + std::to_string(pad_w)
+			+ " " + std::to_string(pad_h)
+			+ " " + std::to_string(dilation_w)
+			+ " " + std::to_string(dilation_h);
+
+		std::cout << "INFO: The parameters are : " << pad_h << " " << pad_w << " " << stride_w << " " << stride_h << " " << kernel_w << " " << kernel_h << std::endl;		
+	}
+	else if(layer_type == "MaxPool") {
+		
+		int pad_h, pad_w;
+		int stride_h, stride_w;
+		int kernel_h, kernel_w;
+
+		for(int i=0; i < node_proto.attribute_size(); i++) {
+			const onnx::AttributeProto& attribute_proto = node_proto.attribute(i);
+			std::string attribute_name = attribute_proto.name();
+		
+			if(attribute_name == "strides") {
+				stride_h = attribute_proto.ints(0);
+				stride_w = attribute_proto.ints(1);
+			}
+			else if(attribute_name == "pads") {
+				pad_h = attribute_proto.ints(0);
+				pad_w = attribute_proto.ints(1);
+			}
+			else if(attribute_name == "kernel_shape") {
+				kernel_h = attribute_proto.ints(0);
+				kernel_w = attribute_proto.ints(1);
+			}
+
+		}
+
+		params = std::to_string(kernel_w)
+			+ " " + std::to_string(kernel_h)
+			+ " " + std::to_string(stride_w)
+			+ " " + std::to_string(stride_h)
+			+ " " + std::to_string(pad_w)
+			+ " " + std::to_string(pad_h);
+		
+		std::cout << "INFO: The parameters are: " << pad_h << " " << pad_w << " " << stride_w << " " << stride_h << " " << kernel_w << " " << kernel_h << std::endl;
+	
+
+	}
+	
+
+	return 0;
+}
+
 int parseOnnxGraph(const onnx::GraphProto& graph_proto)
 {
 	if(graph_proto.has_name()) {
@@ -82,19 +163,24 @@ int parseOnnxGraph(const onnx::GraphProto& graph_proto)
 	}
 	else {
 		std::cout << "RESULT: Weights and bias extraction successful" << std::endl;
-	}
+	} 
 
 	//TODO: Extract the network structure and finalize  the GDF.
-/*	
+	
+	std::cout << "INFO: Extracting the network structure for : " << graph_proto.name() << std::endl;
+
 	for(int i=0; i < graph_proto.node_size(); i++) {
 		const onnx::NodeProto node_proto = graph_proto.node(i);
 		std::cout << "INFO: Layer is : " << node_proto.op_type() << std::endl;
-		
-		for(int j=0; j < node_proto.input_size(); j++) {
+		std::string params;
+		getLayerParams(node_proto, params);	
+		/*for(int j=0; j < node_proto.input_size(); j++) {
 			std::cout << "Input is : " << node_proto.input(j) << std::endl;
-		}
+		} */
 
-		for(int j=0; j < node_proto.output_size(); j++) {
+
+
+		/*for(int j=0; j < node_proto.output_size(); j++) {
 			std::cout << "Output is : " << node_proto.output(j) << std::endl;
 		}
 
@@ -107,9 +193,9 @@ int parseOnnxGraph(const onnx::GraphProto& graph_proto)
 				std::cout << "Tensors size is : " << attribute_proto.tensors_size() << std::endl;
 			}
 			
-		}
+		} */
 	}
-*/
+
 	
 	return 0;
 }
