@@ -143,15 +143,45 @@ int getLayerParams(const onnx::NodeProto& node_proto, std::string& params)
 			+ " " + std::to_string(pad_h);
 		
 		std::cout << "INFO: The parameters are: " << pad_h << " " << pad_w << " " << stride_w << " " << stride_h << " " << kernel_w << " " << kernel_h << std::endl;
-	
+	}
+	else if(layer_type == "LRN") {
+		
+		int lrn_local_size;
+		float alpha, beta, bias;
 
+		for(int i=0; i < node_proto.attribute_size(); i++) {
+			const onnx::AttributeProto& attribute_proto = node_proto.attribute(i);
+			std::string attribute_name = attribute_proto.name();
+		
+			if(attribute_name == "size") {
+				lrn_local_size = attribute_proto.i();
+			}
+			else if(attribute_name == "alpha") {
+				alpha = attribute_proto.f();
+			}
+			else if(attribute_name == "beta") {
+				beta = attribute_proto.f();
+			}
+			else if(attribute_name == "bias") {
+				bias = attribute_proto.f();
+			}
+		}
+
+		params = std::to_string(lrn_local_size)
+			+ " " + std::to_string(alpha)
+			+ " " + std::to_string(beta)
+			+ " " + std::to_string(bias);
+
+		std::cout << "INFO: The parameters: " << lrn_local_size << " " << alpha << " " << beta << " " << bias << std::endl;
 	}
 	
-
 	return 0;
 }
 
-int parseOnnxGraph(const onnx::GraphProto& graph_proto)
+int parseOnnxGraph(
+	const onnx::GraphProto& graph_proto,
+	std::map<std::string, std::map<std::string, std::string>>& net
+)
 {
 	if(graph_proto.has_name()) {
 		std::cout << "INFO: Extracting the weights for : " << graph_proto.name() << std::endl;
@@ -165,8 +195,6 @@ int parseOnnxGraph(const onnx::GraphProto& graph_proto)
 		std::cout << "RESULT: Weights and bias extraction successful" << std::endl;
 	} 
 
-	//TODO: Extract the network structure and finalize  the GDF.
-	
 	std::cout << "INFO: Extracting the network structure for : " << graph_proto.name() << std::endl;
 
 	for(int i=0; i < graph_proto.node_size(); i++) {
@@ -174,33 +202,37 @@ int parseOnnxGraph(const onnx::GraphProto& graph_proto)
 		std::cout << "INFO: Layer is : " << node_proto.op_type() << std::endl;
 		std::string params;
 		getLayerParams(node_proto, params);	
-		/*for(int j=0; j < node_proto.input_size(); j++) {
-			std::cout << "Input is : " << node_proto.input(j) << std::endl;
-		} */
 
-
-
-		/*for(int j=0; j < node_proto.output_size(); j++) {
-			std::cout << "Output is : " << node_proto.output(j) << std::endl;
+		std::map<std::string, std::string> layer_details;
+		std::string layer_type = node_proto.op_type();
+		std::string layer_input = node_proto.input(0);
+		std::string layer_output = node_proto.output(0);		
+		
+		layer_details["type"] = layer_type;
+		layer_details["input"] = layer_input;
+		layer_details["output"] = layer_output;
+		layer_details["params"] = params;
+		
+		if(node_proto.input_size() > 2) {
+			std::string layer_weights = node_proto.input(1);
+			layer_details["weights"] = layer_weights;
+		}
+		
+		if(node_proto.input_size() > 3) {
+			std::string layer_bias = node_proto.input(2);
+			layer_details["bias"] = layer_bias;
 		}
 
-		std::cout << "INFO: attribute proto size is : " << node_proto.attribute_size() << std::endl;
-		if(node_proto.attribute_size() > 0) {
-			
-			for(int j=0; j < node_proto.attribute_size() ; j++) {
-				const onnx::AttributeProto& attribute_proto = node_proto.attribute(j);
-				std::cout << "Attribute name is: " << attribute_proto.name() << std::endl;
-				std::cout << "Tensors size is : " << attribute_proto.tensors_size() << std::endl;
-			}
-			
-		} */
+		net[layer_input] = layer_details;
 	}
 
-	
 	return 0;
 }
 
-int loadOnnxModelFile(const char * fileName)
+int loadOnnxModelFile(
+	const char * fileName,
+	std::map<std::string, std::map<std::string, std::string>>& net
+)
 {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 	
@@ -214,7 +246,7 @@ int loadOnnxModelFile(const char * fileName)
 		if(model_proto.has_graph()) {
 			std::cout << "DEBUG: Parsing the onnx model." << std::endl;
 			const onnx::GraphProto graph_proto = model_proto.graph();
-			if(parseOnnxGraph(graph_proto) < 0) {
+			if(parseOnnxGraph(graph_proto, net) < 0) {
 				std::cout << "ERROR: Unable to parse ONNX model." << std::endl;
 				return -1;
 			}
@@ -237,7 +269,7 @@ int main(int argc, char * argv[])
 {
 	const char * usage = 
 			"Usage: \n"
-			" ./onnx_gdf_generator <net.pb> [n c H W]";
+			" ./onnx_gdf_generator <net.pb> <n> <c> <H> <W>";
 	
 	if(argc < 2) {
 		printf("ERROR: %s\n", usage);
@@ -252,10 +284,14 @@ int main(int argc, char * argv[])
 	if(argc > 5) inputDim[3] = atoi(argv[5]);
 
 	//load onnx model.
-	if(loadOnnxModelFile(fileName) < 0) {
+	std::map<std::string, std::map<std::string, std::string>> net;
+	if(loadOnnxModelFile(fileName, net) < 0) {
 		return -1;
 	}
-	
+	else {
+		std::cout << "INFO: Network structure is extracted successfully." << std::endl;
+	}
+		
 
 	return 0;
 }
