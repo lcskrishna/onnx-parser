@@ -12,6 +12,101 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+int calculateTensorDims
+(
+	const onnx::GraphProto& graph_proto,
+	std::map<int, std::map<std::string, std::string>>& net
+)
+{
+	std::cout << "INFO: Input size is: " << graph_proto.input_size() << std::endl;
+
+	std::map<std::string, std::vector<int>> input_tensor_dim_map;	
+
+	//Inputs to the graph.
+	for(int i=0; i < graph_proto.input_size(); i++) {
+		const onnx::ValueInfoProto& value_info_proto = graph_proto.input(i);
+		std::cout << "Input is : " << value_info_proto.name() << std::endl;
+		std::string layer_input = value_info_proto.name();
+		std::vector<int> dims;
+		
+		const onnx::TypeProto& type_proto = value_info_proto.type();
+		const onnx::TypeProto::Tensor& tensor = type_proto.tensor_type();
+		const onnx::TensorShapeProto& tensor_shape = tensor.shape();
+		
+		for(int j=0; j < tensor_shape.dim_size(); j++) {
+			const onnx::TensorShapeProto::Dimension& dimension = tensor_shape.dim(j);
+			std::cout << dimension.dim_value() << " ";
+			dims.push_back(dimension.dim_value());
+		}
+
+		input_tensor_dim_map[layer_input] = dims;
+		
+		std::cout << std::endl;
+
+	}
+
+	std::cout << "The size of the map is : " << input_tensor_dim_map.size() << std::endl;
+
+	//outputs to the graph.
+	std::cout << "INFO: Output size is : " << graph_proto.output_size() << std::endl;
+	for(int i=0; i < graph_proto.output_size(); i++) {
+		const onnx::ValueInfoProto& value_info_proto = graph_proto.output(i);
+		std::cout << "Output is : " << value_info_proto.name() << std::endl;
+	}
+
+	std::map<int, std::map<std::string, vector<int>> tensorDims;
+
+	for(int i=0; i < net.size(); i++) {
+		std::map<std::string, std::string> layer_details = net.find(i)->second; 
+		std::string layer_type = layer_details.find("type")->second;
+		std::string layer_input = layer_details.find("input")->second;
+		std::string layer_output = layer_details.find("output")->second;
+		int in_w, in_h, in_c, in_n;
+		int out_w, out_h, out_c, out_n;
+		vector<int> output_dims;
+
+		vector<int> input_dims = input_tensor_dim_map.find(layer_input)->second;
+		in_n = input_dims[0]; in_c = input_dims[1]; in_h = input_dims[2]; in_w = input_dims[3];
+		std::map<std::string, vector<int>> in_out_map;
+		in_out_map[layer_input] = input_dims;			
+
+		if(layer_type == "Conv") {
+			std::string layer_weights = layer_details.find("weights")->second;
+			std::string layer_bias = layer_details.find("bias")->second;
+			std::string params = layer_details.find("params")->second;
+			vector<int> weight_dims = input_tensor_dim_map.find(layer_weights)->second;
+			vector<int> bias_dims;
+			if(layer_bias != NULL) {
+				bias_dims = input_tensor_dim_map.find(layer_bias)->second;
+			}
+			int kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h, dilation_w, dilation_h;
+			std::stringstream ss(params);
+			ss >> kernel_w >> kernel_h >> stride_w >> stride_h >> pad_w >> pad_h >> dilation_w >> dilation_h;
+
+			out_w = ((in_w + 2 * (pad_w) - kernel_w - (kernel_w - 1) * (dilation_w - 1))/stride_w) + 1;
+			out_h = ((in_h + 2 * (pad_h) - kernel_h - (kernel_h - 1) * (dilation_h - 1))/stride_h) + 1;
+			out_c = weight_dims[0];
+			out_n = in_n;
+			
+			in_out_map[layer_weights] = weight_dims;
+			in_out_map[layer_bias] = bias_dims;	
+		}
+		
+		output_dims.push_back(out_n);
+		output_dims.push_back(out_c);
+		output_dims.push_back(out_h);
+		output_dims.push_back(out_w);
+		in_out_map[layer_output] = output_dims;
+
+		tensorDims[i] = in_out_map;
+
+		for(std::map<std::string, std::string>::iterator it = layer_details.begin() ; it != layer_details.end(); ++it) {
+			//std::cout << it->first << std::endl;
+			//std::cout << it->second << std::endl;
+		}
+	}	
+}
+
 void formatFileName(std::string& str, const std::string& from, const std::string& to)
 {
     //Written to avoid conflicts with file creation with filenames that contain "/"
@@ -180,7 +275,7 @@ int getLayerParams(const onnx::NodeProto& node_proto, std::string& params)
 
 int parseOnnxGraph(
 	const onnx::GraphProto& graph_proto,
-	std::map<std::string, std::map<std::string, std::string>>& net
+	std::map<int, std::map<std::string, std::string>>& net
 )
 {
 	if(graph_proto.has_name()) {
@@ -207,6 +302,8 @@ int parseOnnxGraph(
 		std::string layer_type = node_proto.op_type();
 		std::string layer_input = node_proto.input(0);
 		std::string layer_output = node_proto.output(0);		
+
+		std::cout << "INFO: Layer name is : " << node_proto.name() << std::endl;
 		
 		layer_details["type"] = layer_type;
 		layer_details["input"] = layer_input;
@@ -223,15 +320,17 @@ int parseOnnxGraph(
 			layer_details["bias"] = layer_bias;
 		}
 
-		net[layer_input] = layer_details;
+		net[i] = layer_details;
 	}
+
+	calculateTensorDims(graph_proto, net);
 
 	return 0;
 }
 
 int loadOnnxModelFile(
 	const char * fileName,
-	std::map<std::string, std::map<std::string, std::string>>& net
+	std::map<int, std::map<std::string, std::string>>& net
 )
 {
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
@@ -284,7 +383,7 @@ int main(int argc, char * argv[])
 	if(argc > 5) inputDim[3] = atoi(argv[5]);
 
 	//load onnx model.
-	std::map<std::string, std::map<std::string, std::string>> net;
+	std::map<int, std::map<std::string, std::string>> net;
 	if(loadOnnxModelFile(fileName, net) < 0) {
 		return -1;
 	}
@@ -292,6 +391,5 @@ int main(int argc, char * argv[])
 		std::cout << "INFO: Network structure is extracted successfully." << std::endl;
 	}
 		
-
 	return 0;
 }
