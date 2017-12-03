@@ -18,14 +18,11 @@ int calculateTensorDims
 	std::map<int, std::map<std::string, std::string>>& net
 )
 {
-	std::cout << "INFO: Input size is: " << graph_proto.input_size() << std::endl;
-
 	std::map<std::string, std::vector<int>> input_tensor_dim_map;	
 
 	//Inputs to the graph.
 	for(int i=0; i < graph_proto.input_size(); i++) {
 		const onnx::ValueInfoProto& value_info_proto = graph_proto.input(i);
-		std::cout << "Input is : " << value_info_proto.name() << std::endl;
 		std::string layer_input = value_info_proto.name();
 		std::vector<int> dims;
 		
@@ -35,50 +32,45 @@ int calculateTensorDims
 		
 		for(int j=0; j < tensor_shape.dim_size(); j++) {
 			const onnx::TensorShapeProto::Dimension& dimension = tensor_shape.dim(j);
-			std::cout << dimension.dim_value() << " ";
 			dims.push_back(dimension.dim_value());
 		}
 
 		input_tensor_dim_map[layer_input] = dims;
-		
-		std::cout << std::endl;
-
 	}
 
-	std::cout << "The size of the map is : " << input_tensor_dim_map.size() << std::endl;
-
-	//outputs to the graph.
-	std::cout << "INFO: Output size is : " << graph_proto.output_size() << std::endl;
-	for(int i=0; i < graph_proto.output_size(); i++) {
-		const onnx::ValueInfoProto& value_info_proto = graph_proto.output(i);
-		std::cout << "Output is : " << value_info_proto.name() << std::endl;
-	}
-
-	std::map<int, std::map<std::string, vector<int>> tensorDims;
+	std::map<int, std::map<std::string, std::vector<int>>> tensorDims;
 
 	for(int i=0; i < net.size(); i++) {
 		std::map<std::string, std::string> layer_details = net.find(i)->second; 
 		std::string layer_type = layer_details.find("type")->second;
 		std::string layer_input = layer_details.find("input")->second;
 		std::string layer_output = layer_details.find("output")->second;
+		std::cout << "Input output type is " << layer_input << " " << layer_output << " " << layer_type << std::endl;
 		int in_w, in_h, in_c, in_n;
 		int out_w, out_h, out_c, out_n;
-		vector<int> output_dims;
-
-		vector<int> input_dims = input_tensor_dim_map.find(layer_input)->second;
+		std::vector<int> output_dims;
+		
+		std::vector<int> input_dims = input_tensor_dim_map.find(layer_input)->second;
 		in_n = input_dims[0]; in_c = input_dims[1]; in_h = input_dims[2]; in_w = input_dims[3];
-		std::map<std::string, vector<int>> in_out_map;
+		std::map<std::string, std::vector<int>> in_out_map;
 		in_out_map[layer_input] = input_dims;			
 
 		if(layer_type == "Conv") {
-			std::string layer_weights = layer_details.find("weights")->second;
-			std::string layer_bias = layer_details.find("bias")->second;
-			std::string params = layer_details.find("params")->second;
-			vector<int> weight_dims = input_tensor_dim_map.find(layer_weights)->second;
-			vector<int> bias_dims;
-			if(layer_bias != NULL) {
+			std::string layer_weights = " "; 
+			std::vector<int> weight_dims, bias_dims;
+			if(layer_details.size() > 4) {
+				layer_weights = layer_details.find("weights")->second;
+				weight_dims = input_tensor_dim_map.find(layer_weights)->second;
+			}
+			std::string layer_bias = " ";
+			if(layer_details.size() > 5) { 
+				std::string layer_bias = layer_details.find("bias")->second;
 				bias_dims = input_tensor_dim_map.find(layer_bias)->second;
 			}
+			std::string params = layer_details.find("params")->second;
+			//std::vector<int> weight_dims = input_tensor_dim_map.find(layer_weights)->second;
+			//std::vector<int> bias_dims = input_tensor_dim_map.find(layer_bias)->second;
+			
 			int kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h, dilation_w, dilation_h;
 			std::stringstream ss(params);
 			ss >> kernel_w >> kernel_h >> stride_w >> stride_h >> pad_w >> pad_h >> dilation_w >> dilation_h;
@@ -88,15 +80,86 @@ int calculateTensorDims
 			out_c = weight_dims[0];
 			out_n = in_n;
 			
-			in_out_map[layer_weights] = weight_dims;
-			in_out_map[layer_bias] = bias_dims;	
+			if(layer_details.size() > 4) {
+				in_out_map[layer_weights] = weight_dims;
+			}
+			
+			if(layer_details.size() > 5) {
+				in_out_map[layer_bias] = bias_dims;
+			}
+			//std::cout << "Out dims: " << out_w << " " << out_h << " " << out_c << " " << out_n << std::endl;	
+			std::cout << "Conv" << std::endl;
+		}
+		else if(layer_type == "Relu") {
+			out_w = in_w;
+			out_h = in_h;
+			out_c = in_c;
+			out_n = in_n;
+			std::cout << "Relu" << std::endl;
+		}
+		else if(layer_type == "LRN") {
+			out_w = in_w;
+			out_h = in_h;
+			out_c = in_c;
+			out_n = in_n;
+			std::cout << "LRN" << std::endl;
+		}
+		else if(layer_type == "Dropout") {
+			out_w = in_w;
+			out_h = in_h;
+			out_c = in_c;
+			out_n = in_n;
+			std::cout << "Dropout" << std::endl;
+		}
+		else if(layer_type == "MaxPool") {
+			std::string params = layer_details.find("params")->second;
+			std::stringstream ss(params);
+			int kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h;
+			ss >> kernel_w >> kernel_h >> stride_w >> stride_h >> pad_w >> pad_h;
+
+			out_w = static_cast<int>(ceil( static_cast<float> (in_w + 2 * pad_w + stride_w - kernel_w)/stride_w));
+			out_h = static_cast<int>(ceil( static_cast<float> (in_h + 2 * pad_h + stride_h - kernel_h)/stride_h));
+			if(pad_h > 0) if((out_h-1) * stride_h >= (in_h + pad_h)) out_h = out_h - 1;
+			if(pad_w > 0) if((out_w-1) * stride_w >= (in_w + pad_w)) out_w = out_w - 1;
+			
+			out_c = in_c;
+			out_n = in_n;	
+			std::cout << "MaxPool" << std::endl;
+		}
+		else if(layer_type == "Gemm") {
+			
+			std::string layer_weights = " "; 
+			std::vector<int> weight_dims, bias_dims;
+			if(layer_details.size() > 4) {
+				layer_weights = layer_details.find("weights")->second;
+				weight_dims = input_tensor_dim_map.find(layer_weights)->second;
+			}
+			std::string layer_bias = " ";
+			if(layer_details.size() > 5) { 
+				std::string layer_bias = layer_details.find("bias")->second;
+				bias_dims = input_tensor_dim_map.find(layer_bias)->second;
+			}
+			
+			if(layer_details.size() > 4) {
+				in_out_map[layer_weights] = weight_dims;
+			}
+			
+			if(layer_details.size() > 5) {
+				in_out_map[layer_bias] = bias_dims;
+			}
+			std::cout << "Gemm" << std::endl;
+
 		}
 		
 		output_dims.push_back(out_n);
 		output_dims.push_back(out_c);
 		output_dims.push_back(out_h);
 		output_dims.push_back(out_w);
+		input_tensor_dim_map[layer_output] = output_dims;
+		std::cout << "Added output : " << layer_output << std::endl;
 		in_out_map[layer_output] = output_dims;
+
+		std::cout << "Out dims: " << out_w << " " << out_h << " " << out_c << " " << out_n << std::endl;	
 
 		tensorDims[i] = in_out_map;
 
@@ -104,6 +167,7 @@ int calculateTensorDims
 			//std::cout << it->first << std::endl;
 			//std::cout << it->second << std::endl;
 		}
+		
 	}	
 }
 
@@ -302,8 +366,6 @@ int parseOnnxGraph(
 		std::string layer_type = node_proto.op_type();
 		std::string layer_input = node_proto.input(0);
 		std::string layer_output = node_proto.output(0);		
-
-		std::cout << "INFO: Layer name is : " << node_proto.name() << std::endl;
 		
 		layer_details["type"] = layer_type;
 		layer_details["input"] = layer_input;
@@ -313,11 +375,13 @@ int parseOnnxGraph(
 		if(node_proto.input_size() > 2) {
 			std::string layer_weights = node_proto.input(1);
 			layer_details["weights"] = layer_weights;
+			std::cout << "Weights added " << std::endl;
 		}
 		
 		if(node_proto.input_size() > 3) {
 			std::string layer_bias = node_proto.input(2);
 			layer_details["bias"] = layer_bias;
+			std::cout << "Bias added " << std::endl;
 		}
 
 		net[i] = layer_details;
