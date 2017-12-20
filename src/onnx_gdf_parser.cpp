@@ -182,8 +182,39 @@ int writeGDF
 	std::map<int, std::map<std::string, std::vector<int>>> tensorDims
 )
 {
-		
+	ofsGDF << "import vx_nn" << std::endl;
+	ofsGDF << std::endl;	
+	
+	for(int i=0; i < net.size(); i++) {
+		std::map<std::string, std::string> layer_details = net.find(i)->second;
+		std::map<std::string, std::vector<int>> in_out_map = tensorDims.find(i)->second;
 
+		auto&& layer_input = layer_details.find("input")->second;
+		auto&& layer_type = layer_details.find("type")->second;
+		auto&& layer_output = layer_details.find("output")->second;
+
+		//input dims.
+		auto& input_dims = in_out_map.find(layer_input)->second;
+		ofsGDF << "data " << layer_input << " =tensor:4{" << input_dims[0] << "," << input_dims[1] << "," << input_dims[2] << "," << input_dims[3] << "},"
+			<< "VX_TYPE_FLOAT32, 0" << std::endl; 		
+		
+		if(i==0) {
+			ofsGDF << "read " << layer_input << " input.f32" << std::endl;
+		}
+
+		
+		//output dims.
+		auto& output_dims = in_out_map.find(layer_output)->second;
+		//TODO: Generate output dims.
+
+		//TODO: Generate dims of layers and create nodes.
+		//if(type == "Conv") {
+			
+		//}	
+
+		ofsGDF << std::endl;	
+	}		
+	
 	return 0;
 }
 
