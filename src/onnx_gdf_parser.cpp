@@ -195,8 +195,8 @@ int writeGDF
 
 		//input dims.
 		auto& input_dims = in_out_map.find(layer_input)->second;
-		ofsGDF << "data " << layer_input << " =tensor:4{" << input_dims[0] << "," << input_dims[1] << "," << input_dims[2] << "," << input_dims[3] << "},"
-			<< "VX_TYPE_FLOAT32, 0" << std::endl; 		
+		ofsGDF << "data " << layer_input << " = tensor:4{" << input_dims[0] << "," << input_dims[1] << "," << input_dims[2] << "," << input_dims[3] << "},"
+			<< "VX_TYPE_FLOAT32,0" << std::endl; 		
 		
 		if(i==0) {
 			ofsGDF << "read " << layer_input << " input.f32" << std::endl;
@@ -206,11 +206,16 @@ int writeGDF
 		//output dims.
 		auto& output_dims = in_out_map.find(layer_output)->second;
 		//TODO: Generate output dims.
+		ofsGDF << "data " << layer_output << " = tensor:4{" << output_dims[0] << "," << output_dims[1] << "," << output_dims[2] << "," << output_dims[3] << "},"
+			<< "VX_TYPE_FLOAT32,0" << std::endl;
 
 		//TODO: Generate dims of layers and create nodes.
 		//if(type == "Conv") {
 			
 		//}	
+		if(i == net.size() - 1) {
+			ofsGDF << "write " << layer_output << " output.f32" << std::endl;
+		}
 
 		ofsGDF << std::endl;	
 	}		
