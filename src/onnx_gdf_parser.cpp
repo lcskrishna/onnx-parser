@@ -15,7 +15,8 @@
 int calculateTensorDims
 (
 	const onnx::GraphProto& graph_proto,
-	std::map<int, std::map<std::string, std::string>>& net
+	std::map<int, std::map<std::string, std::string>>& net,
+	std::map<int, std::map<std::string, std::vector<int>>>& tensorDims
 )
 {
 	std::map<std::string, std::vector<int>> input_tensor_dim_map;	
@@ -37,8 +38,6 @@ int calculateTensorDims
 
 		input_tensor_dim_map[layer_input] = dims;
 	}
-
-	std::map<int, std::map<std::string, std::vector<int>>> tensorDims;
 
 	for(int i=0; i < net.size(); i++) {
 		std::map<std::string, std::string> layer_details = net.find(i)->second; 
@@ -68,8 +67,6 @@ int calculateTensorDims
 				bias_dims = input_tensor_dim_map.find(layer_bias)->second;
 			}
 			std::string params = layer_details.find("params")->second;
-			//std::vector<int> weight_dims = input_tensor_dim_map.find(layer_weights)->second;
-			//std::vector<int> bias_dims = input_tensor_dim_map.find(layer_bias)->second;
 			
 			int kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h, dilation_w, dilation_h;
 			std::stringstream ss(params);
@@ -87,7 +84,6 @@ int calculateTensorDims
 			if(layer_details.size() > 5) {
 				in_out_map[layer_bias] = bias_dims;
 			}
-			//std::cout << "Out dims: " << out_w << " " << out_h << " " << out_c << " " << out_n << std::endl;	
 			std::cout << "Conv" << std::endl;
 		}
 		else if(layer_type == "Relu") {
@@ -130,18 +126,30 @@ int calculateTensorDims
 			
 			std::string layer_weights = " "; 
 			std::vector<int> weight_dims, bias_dims;
+			std::vector<int> weight_dims_gemm;
 			if(layer_details.size() > 4) {
 				layer_weights = layer_details.find("weights")->second;
 				weight_dims = input_tensor_dim_map.find(layer_weights)->second;
+				weight_dims_gemm.push_back(in_w);
+				weight_dims_gemm.push_back(in_h);
+				weight_dims_gemm.push_back(in_c);
+				weight_dims_gemm.push_back(weight_dims[0]);
+
 			}
 			std::string layer_bias = " ";
 			if(layer_details.size() > 5) { 
 				std::string layer_bias = layer_details.find("bias")->second;
 				bias_dims = input_tensor_dim_map.find(layer_bias)->second;
+				//TODO: Need to handle bias dims.
 			}
+
+			out_n = 1;
+			out_c = weight_dims[0];
+			out_h = 1;
+			out_w = 1;
 			
 			if(layer_details.size() > 4) {
-				in_out_map[layer_weights] = weight_dims;
+				in_out_map[layer_weights] = weight_dims_gemm;
 			}
 			
 			if(layer_details.size() > 5) {
@@ -162,13 +170,9 @@ int calculateTensorDims
 		std::cout << "Out dims: " << out_w << " " << out_h << " " << out_c << " " << out_n << std::endl;	
 
 		tensorDims[i] = in_out_map;
+	}
 
-		for(std::map<std::string, std::string>::iterator it = layer_details.begin() ; it != layer_details.end(); ++it) {
-			//std::cout << it->first << std::endl;
-			//std::cout << it->second << std::endl;
-		}
-		
-	}	
+	return 0;	
 }
 
 void formatFileName(std::string& str, const std::string& from, const std::string& to)
@@ -387,12 +391,11 @@ int parseOnnxGraph(
 		net[i] = layer_details;
 	}
 
-	calculateTensorDims(graph_proto, net);
-
 	return 0;
 }
 
 int loadOnnxModelFile(
+	onnx::GraphProto& graph_proto,
 	const char * fileName,
 	std::map<int, std::map<std::string, std::string>>& net
 )
@@ -408,7 +411,7 @@ int loadOnnxModelFile(
                 std::cout << "INFO: Sucessfully read onnx model file. " << std::endl;
 		if(model_proto.has_graph()) {
 			std::cout << "DEBUG: Parsing the onnx model." << std::endl;
-			const onnx::GraphProto graph_proto = model_proto.graph();
+			graph_proto = model_proto.graph();
 			if(parseOnnxGraph(graph_proto, net) < 0) {
 				std::cout << "ERROR: Unable to parse ONNX model." << std::endl;
 				return -1;
@@ -447,12 +450,22 @@ int main(int argc, char * argv[])
 	if(argc > 5) inputDim[3] = atoi(argv[5]);
 
 	//load onnx model.
+	onnx::GraphProto graph_proto;
 	std::map<int, std::map<std::string, std::string>> net;
-	if(loadOnnxModelFile(fileName, net) < 0) {
+	if(loadOnnxModelFile(graph_proto, fileName, net) < 0) {
 		return -1;
 	}
 	else {
 		std::cout << "INFO: Network structure is extracted successfully." << std::endl;
+	}
+
+	//calculate tensor dimensions.
+	std::map<int, std::map<std::string, std::vector<int>>> tensorDims;
+	if(calculateTensorDims(graph_proto, net, tensorDims) < 0) {
+		std::cout << "ERROR: Unable to calculate tensor dims" << std::endl;
+	}
+	else {
+		std::cout << "INFO: Tensor Dim calculation successful" << std::endl;
 	}
 		
 	return 0;
