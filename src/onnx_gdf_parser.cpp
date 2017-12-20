@@ -175,6 +175,18 @@ int calculateTensorDims
 	return 0;	
 }
 
+int writeGDF
+(
+	std::ofstream& ofsGDF,
+	std::map<int, std::map<std::string, std::string>> net,
+	std::map<int, std::map<std::string, std::vector<int>>> tensorDims
+)
+{
+		
+
+	return 0;
+}
+
 void formatFileName(std::string& str, const std::string& from, const std::string& to)
 {
     //Written to avoid conflicts with file creation with filenames that contain "/"
@@ -467,6 +479,10 @@ int main(int argc, char * argv[])
 	else {
 		std::cout << "INFO: Tensor Dim calculation successful" << std::endl;
 	}
+
+	//write gdf
+	std::ofstream ofsGDF("net.gdf", std::ios::binary);
+	writeGDF(ofsGDF, net, tensorDims);
 		
 	return 0;
 }
