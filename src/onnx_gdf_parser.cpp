@@ -63,7 +63,7 @@ int calculateTensorDims
 			}
 			std::string layer_bias = " ";
 			if(layer_details.size() > 5) { 
-				std::string layer_bias = layer_details.find("bias")->second;
+				layer_bias = layer_details.find("bias")->second;
 				bias_dims = input_tensor_dim_map.find(layer_bias)->second;
 			}
 			std::string params = layer_details.find("params")->second;
@@ -83,6 +83,7 @@ int calculateTensorDims
 			
 			if(layer_details.size() > 5) {
 				in_out_map[layer_bias] = bias_dims;
+				std::cout << "Bias dims aer " << layer_bias << " " <<  bias_dims[0] << std::endl;
 			}
 			std::cout << "Conv" << std::endl;
 		}
@@ -192,6 +193,7 @@ int writeGDF
 	std::map<int, std::map<std::string, std::vector<int>>> tensorDims
 )
 {
+	std::cout << "INFO: Writing the GDF " << std::endl;
 	ofsGDF << "import vx_nn" << std::endl;
 	ofsGDF << std::endl;	
 	
@@ -206,7 +208,7 @@ int writeGDF
 		//input dims.
 		auto& input_dims = in_out_map.find(layer_input)->second;
 		formatFileName(layer_input, "/", "_");
-		ofsGDF << "data " << layer_input << " = tensor:4{" << input_dims[0] << "," << input_dims[1] << "," << input_dims[2] << "," << input_dims[3] << "},"
+		ofsGDF << "data " << layer_input << " = tensor:4{" << input_dims[3] << "," << input_dims[2] << "," << input_dims[1] << "," << input_dims[0] << "},"
 			<< "VX_TYPE_FLOAT32,0" << std::endl; 		
 		
 		if(i==0) {
@@ -217,7 +219,7 @@ int writeGDF
 		//output dims.
 		auto& output_dims = in_out_map.find(layer_output)->second;
 		formatFileName(layer_output, "/", "_");
-		ofsGDF << "data " << layer_output << " = tensor:4{" << output_dims[0] << "," << output_dims[1] << "," << output_dims[2] << "," << output_dims[3] << "},"
+		ofsGDF << "data " << layer_output << " = tensor:4{" << output_dims[3] << "," << output_dims[2] << "," << output_dims[1] << "," << output_dims[0] << "},"
 			<< "VX_TYPE_FLOAT32,0" << std::endl;
 
 		//TODO: Generate dims of layers and create nodes.
@@ -231,8 +233,8 @@ int writeGDF
 
 			if(layer_details.size() > 4) {
 				formatFileName(layer_weights, "/", "_");
-				ofsGDF << "data " << layer_weights << " = tensor:4{" << weight_dims[0] << "," << weight_dims[1] << "," << weight_dims[2] << "," 
-					<< weight_dims[3] << "}," << "VX_TYPE_FLOAT32,0" << std::endl;
+				ofsGDF << "data " << layer_weights << " = tensor:4{" << weight_dims[3] << "," << weight_dims[2] << "," << weight_dims[1] << "," 
+					<< weight_dims[0] << "}," << "VX_TYPE_FLOAT32,0" << std::endl;
 				ofsGDF << "init " << layer_weights << " weights/" << layer_weights << ".f32" << std::endl;
 			}
 
@@ -240,13 +242,13 @@ int writeGDF
 			if(layer_details.size() > 5) {
 				layer_bias = layer_details.find("bias")->second;
 				formatFileName(layer_bias, "/", "_");
-				auto& bias_dims = in_out_map.find(layer_bias)->second;
+				std::vector<int> bias_dims = in_out_map.find(layer_bias)->second;
 				ofsGDF << "data " << layer_bias << " = tensor:1{" << bias_dims[0] << "},VX_TYPE_FLOAT32,0" << std::endl;
 				ofsGDF << "init " << layer_bias << " weights/" << layer_bias << ".f32" << std::endl;
 			}
 			else if(layer_details.size() == 5) {
 				layer_bias = layer_output + "_b";
-				ofsGDF << "data " << layer_bias << " = tensor:1{" << weight_dims[3] << "},VX_TYPE_FLOAT32,0" << std::endl;
+				ofsGDF << "data " << layer_bias << " = tensor:1{" << weight_dims[0] << "},VX_TYPE_FLOAT32,0" << std::endl;
 			}
 			
 			//conv params.
@@ -459,17 +461,18 @@ int parseOnnxGraph(
 		layer_details["input"] = layer_input;
 		layer_details["output"] = layer_output;
 		layer_details["params"] = params;
-		
-		if(node_proto.input_size() > 2) {
+	
+		std::cout << "Input size is : " << node_proto.input_size() << std::endl;	
+		if(node_proto.input_size() > 1) {
 			std::string layer_weights = node_proto.input(1);
 			layer_details["weights"] = layer_weights;
 			std::cout << "Weights added " << std::endl;
 		}
 		
-		if(node_proto.input_size() > 3) {
+		if(node_proto.input_size() > 2) {
 			std::string layer_bias = node_proto.input(2);
 			layer_details["bias"] = layer_bias;
-			std::cout << "Bias added " << std::endl;
+			std::cout << "Bias added is: " << layer_bias << std::endl;
 		}
 
 		net[i] = layer_details;
