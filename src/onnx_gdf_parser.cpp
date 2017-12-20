@@ -213,6 +213,7 @@ int writeGDF
 
 		auto&& layer_type = layer_details.find("type")->second;
 		auto&& layer_output = layer_details.find("output")->second;
+		auto&& layer_input = layer_details.find("input")->second;
 		
 		//output dims.
 		auto& output_dims = in_out_map.find(layer_output)->second;
@@ -260,7 +261,11 @@ int writeGDF
 	
 		}
 		else if(layer_type == "Relu") {
-			
+			ofsGDF << "data " << layer_output << "_mode = " << "scalar:VX_TYPE_ENUM,VX_NN_ACTIVATION_RELU" << std::endl;
+			ofsGDF << "data " << layer_output << "_param_a = " << "scalar:VX_TYPE_FLOAT32,0" << std::endl;
+			ofsGDF << "data " << layer_output << "_param_b = " << "scalar:VX_TYPE_FLOAT32,0" << std::endl;
+			ofsGDF << "node org.khronos.nn_extension.activation_layer " << layer_input << " " << layer_output << "_mode" << " "
+				<< layer_output << "_param_a" << " " << layer_output << "_param_b" << " " << layer_output << std::endl; 	
 		}
 	
 		if(i == net.size() - 1) {
@@ -559,7 +564,12 @@ int main(int argc, char * argv[])
 
 	//write gdf
 	std::ofstream ofsGDF("net.gdf", std::ios::binary);
-	writeGDF(ofsGDF, net, tensorDims);
+	if(writeGDF(ofsGDF, net, tensorDims) < 0) {
+		std::cout << "ERROR: Unable to write into GDF file" << std::endl;
+	}
+	else {
+		std::cout << "RESULT: GDF Generation is successful." << std::endl;
+	}
 		
 	return 0;
 }
