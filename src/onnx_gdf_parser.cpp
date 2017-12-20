@@ -175,6 +175,16 @@ int calculateTensorDims
 	return 0;	
 }
 
+void formatFileName(std::string& str, const std::string& from, const std::string& to)
+{
+    //Written to avoid conflicts with file creation with filenames that contain "/"
+    size_t start_pos = 0;
+    while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
+        str.replace(start_pos, from.length(), to);
+        start_pos += to.length(); // Handles case where 'to' is a substring of 'from'
+    }
+}
+
 int writeGDF
 (
 	std::ofstream& ofsGDF,
@@ -195,6 +205,7 @@ int writeGDF
 
 		//input dims.
 		auto& input_dims = in_out_map.find(layer_input)->second;
+		formatFileName(layer_input, "/", "_");
 		ofsGDF << "data " << layer_input << " = tensor:4{" << input_dims[0] << "," << input_dims[1] << "," << input_dims[2] << "," << input_dims[3] << "},"
 			<< "VX_TYPE_FLOAT32,0" << std::endl; 		
 		
@@ -205,14 +216,49 @@ int writeGDF
 		
 		//output dims.
 		auto& output_dims = in_out_map.find(layer_output)->second;
-		//TODO: Generate output dims.
+		formatFileName(layer_output, "/", "_");
 		ofsGDF << "data " << layer_output << " = tensor:4{" << output_dims[0] << "," << output_dims[1] << "," << output_dims[2] << "," << output_dims[3] << "},"
 			<< "VX_TYPE_FLOAT32,0" << std::endl;
 
 		//TODO: Generate dims of layers and create nodes.
-		//if(type == "Conv") {
+		if(layer_type == "Conv") {
+			auto&& layer_params = layer_details.find("params")->second;
+			int kernel_w, kernel_h, pad_w, pad_h, dilation_w, dilation_h, stride_w, stride_h;
+			std::stringstream ss(layer_params);
+			ss >> kernel_w >> kernel_h >> stride_w >> stride_h >> pad_w >> pad_h >> dilation_w >> dilation_h;
+			auto&& layer_weights = layer_details.find("weights")->second;
+			auto& weight_dims = in_out_map.find(layer_weights)->second;
+
+			if(layer_details.size() > 4) {
+				formatFileName(layer_weights, "/", "_");
+				ofsGDF << "data " << layer_weights << " = tensor:4{" << weight_dims[0] << "," << weight_dims[1] << "," << weight_dims[2] << "," 
+					<< weight_dims[3] << "}," << "VX_TYPE_FLOAT32,0" << std::endl;
+				ofsGDF << "init " << layer_weights << " weights/" << layer_weights << ".f32" << std::endl;
+			}
+
+			std::string layer_bias;
+			if(layer_details.size() > 5) {
+				layer_bias = layer_details.find("bias")->second;
+				formatFileName(layer_bias, "/", "_");
+				auto& bias_dims = in_out_map.find(layer_bias)->second;
+				ofsGDF << "data " << layer_bias << " = tensor:1{" << bias_dims[0] << "},VX_TYPE_FLOAT32,0" << std::endl;
+				ofsGDF << "init " << layer_bias << " weights/" << layer_bias << ".f32" << std::endl;
+			}
+			else if(layer_details.size() == 5) {
+				layer_bias = layer_output + "_b";
+				ofsGDF << "data " << layer_bias << " = tensor:1{" << weight_dims[3] << "},VX_TYPE_FLOAT32,0" << std::endl;
+			}
 			
-		//}	
+			//conv params.
+			ofsGDF << "data " << layer_output << "_params =" << " scalar:VX_TYPE_NN_CONV_PARAMS,{" << pad_w << "," << pad_h << "," 
+				<< "VX_CONVERT_POLICY_SATURATE" << "," << "VX_ROUND_POLICY_TO_NEAREST_EVEN" << ",VX_NN_DS_SIZE_ROUNDING_FLOOR," 
+				<< dilation_w - 1 << "," << dilation_h - 1 << "}" << std::endl;
+
+			//conv node.
+			ofsGDF << "node org.khronos.nn_extension.convolution_layer " << layer_input << " " << layer_weights << " " 
+				<< layer_bias << " " << layer_output << "_params" << " " << layer_output << std::endl;
+	
+		}	
 		if(i == net.size() - 1) {
 			ofsGDF << "write " << layer_output << " output.f32" << std::endl;
 		}
@@ -221,16 +267,6 @@ int writeGDF
 	}		
 	
 	return 0;
-}
-
-void formatFileName(std::string& str, const std::string& from, const std::string& to)
-{
-    //Written to avoid conflicts with file creation with filenames that contain "/"
-    size_t start_pos = 0;
-    while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
-        str.replace(start_pos, from.length(), to);
-        start_pos += to.length(); // Handles case where 'to' is a substring of 'from'
-    }
 }
 
 int dumpOnnxModel(const onnx::GraphProto& graph_proto)
