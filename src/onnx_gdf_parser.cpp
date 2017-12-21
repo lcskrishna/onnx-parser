@@ -139,9 +139,8 @@ int calculateTensorDims
 			}
 			std::string layer_bias = " ";
 			if(layer_details.size() > 5) { 
-				std::string layer_bias = layer_details.find("bias")->second;
+				layer_bias = layer_details.find("bias")->second;
 				bias_dims = input_tensor_dim_map.find(layer_bias)->second;
-				//TODO: Need to handle bias dims.
 			}
 
 			out_n = 1;
@@ -306,8 +305,40 @@ int writeGDF
 				<< layer_output << "_bias "
 				<< std::endl;
 		}
+		else if(layer_type == "Gemm") {
+			int stride_w, stride_h, pad_w, pad_h,dilation_w, dilation_h;
+			stride_w = 1; stride_h = 1; pad_w = 0; pad_h = 0; dilation_w = 1; dilation_h = 1;
+
+			auto&& layer_weights = layer_details.find("weights")->second;
+			auto& weight_dims = in_out_map.find(layer_weights)->second;
+
+			if(layer_details.size() > 4) {
+				formatFileName(layer_weights, "/", "_");
+				ofsGDF << "data " << layer_weights << " =tensor:4{" << weight_dims[0] << "," << weight_dims[1] << "," << weight_dims[2]
+					<< "," << weight_dims[3] << "}," << "VX_TYPE_FLOAT32,0" << std::endl;
+				ofsGDF << "init " << layer_weights << " weights/" << layer_weights << ".f32" << std::endl;
+			}
+
+			std::string layer_bias;
+			if(layer_details.size() > 5) {
+				layer_bias = layer_details.find("bias")->second;
+				formatFileName(layer_bias, "/", "_");
+				std::vector<int> bias_dims = in_out_map.find(layer_bias)->second;
+				ofsGDF << "data " << layer_bias << " = tensor:1{" << bias_dims[0] << "}, VX_TYPE_FLOAT32,0" << std::endl;
+				ofsGDF << "init " << layer_bias << " weights/" << layer_bias << ".f32" << std::endl;
+			}
+			else if(layer_details.size() == 5) {
+				layer_bias = layer_output + "_b";
+				ofsGDF << "data " << layer_bias << " = tensor:1{" << weight_dims[3] << "},VX_TYPE_FLOAT32,0" << std::endl;
+			}
+
+			ofsGDF << "data " << layer_output << "_params = " << "scalar:VX_TYPE_NN_CONV_PARAMS,{" << pad_w << "," << pad_h << ","
+				<< "VX_CONVERT_POLICY_SATURATE, VX_ROUND_POLICY_TO_NEAREST_EVEN,VX_NN_DS_SIZE_ROUNDING_FLOOR,0,0}" << std::endl;
+
+			ofsGDF << "node org.khronos.nn_extension.convolution_layer " << layer_input << " " << layer_weights << " " << layer_bias
+				<< " " << layer_output << "_params" << " " << layer_output << std::endl; 	
+		}
 		
-	
 		if(i == net.size() - 1) {
 			ofsGDF << "write " << layer_output << " output.f32" << std::endl;
 		}
