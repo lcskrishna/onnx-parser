@@ -44,7 +44,6 @@ int calculateTensorDims
 		std::string layer_type = layer_details.find("type")->second;
 		std::string layer_input = layer_details.find("input")->second;
 		std::string layer_output = layer_details.find("output")->second;
-		std::cout << "Input output type is " << layer_input << " " << layer_output << " " << layer_type << std::endl;
 		int in_w, in_h, in_c, in_n;
 		int out_w, out_h, out_c, out_n;
 		std::vector<int> output_dims;
@@ -83,30 +82,25 @@ int calculateTensorDims
 			
 			if(layer_details.size() > 5) {
 				in_out_map[layer_bias] = bias_dims;
-				std::cout << "Bias dims aer " << layer_bias << " " <<  bias_dims[0] << std::endl;
 			}
-			std::cout << "Conv" << std::endl;
 		}
 		else if(layer_type == "Relu") {
 			out_w = in_w;
 			out_h = in_h;
 			out_c = in_c;
 			out_n = in_n;
-			std::cout << "Relu" << std::endl;
 		}
 		else if(layer_type == "LRN") {
 			out_w = in_w;
 			out_h = in_h;
 			out_c = in_c;
 			out_n = in_n;
-			std::cout << "LRN" << std::endl;
 		}
 		else if(layer_type == "Dropout") {
 			out_w = in_w;
 			out_h = in_h;
 			out_c = in_c;
 			out_n = in_n;
-			std::cout << "Dropout" << std::endl;
 		}
 		else if(layer_type == "MaxPool") {
 			std::string params = layer_details.find("params")->second;
@@ -121,7 +115,6 @@ int calculateTensorDims
 			
 			out_c = in_c;
 			out_n = in_n;	
-			std::cout << "MaxPool" << std::endl;
 		}
 		else if(layer_type == "Gemm") {
 			
@@ -155,8 +148,6 @@ int calculateTensorDims
 			if(layer_details.size() > 5) {
 				in_out_map[layer_bias] = bias_dims;
 			}
-			std::cout << "Gemm" << std::endl;
-
 		}
 		
 		output_dims.push_back(out_n);
@@ -164,10 +155,7 @@ int calculateTensorDims
 		output_dims.push_back(out_h);
 		output_dims.push_back(out_w);
 		input_tensor_dim_map[layer_output] = output_dims;
-		std::cout << "Added output : " << layer_output << std::endl;
 		in_out_map[layer_output] = output_dims;
-
-		std::cout << "Out dims: " << out_w << " " << out_h << " " << out_c << " " << out_n << std::endl;	
 
 		tensorDims[i] = in_out_map;
 	}
@@ -341,6 +329,9 @@ int writeGDF
 		else if(layer_type == "Dropout") {
 			ofsGDF << "node org.khronos.openvx.copy " << layer_input << " " << layer_output << std::endl;
 		}
+		else if(layer_type == "Softmax") {
+			ofsGDF << "node org.khronos.nn_extension.softmax_layer " << layer_input << " " << layer_output << std::endl;
+		}
 		
 		if(i == net.size() - 1) {
 			ofsGDF << "write " << layer_output << " output.f32" << std::endl;
@@ -389,7 +380,7 @@ int dumpOnnxModel(const onnx::GraphProto& graph_proto)
 			}
 		
 			fclose(fs);
-			std::cout << "INFO: Weights dumped for: " << tensor_proto.name() <<  std::endl;
+			//std::cout << "INFO: Weights dumped for: " << tensor_proto.name() <<  std::endl;
 		}
 		else {
 			std::cout <<"ERROR: Unsupported data types will be supported in future." << std::endl;
@@ -438,7 +429,6 @@ int getLayerParams(const onnx::NodeProto& node_proto, std::string& params)
 			+ " " + std::to_string(dilation_w)
 			+ " " + std::to_string(dilation_h);
 
-		std::cout << "INFO: The parameters are : " << pad_h << " " << pad_w << " " << stride_w << " " << stride_h << " " << kernel_w << " " << kernel_h << std::endl;		
 	}
 	else if(layer_type == "MaxPool") {
 		
@@ -472,7 +462,6 @@ int getLayerParams(const onnx::NodeProto& node_proto, std::string& params)
 			+ " " + std::to_string(pad_w)
 			+ " " + std::to_string(pad_h);
 		
-		std::cout << "INFO: The parameters are: " << pad_h << " " << pad_w << " " << stride_w << " " << stride_h << " " << kernel_w << " " << kernel_h << std::endl;
 	}
 	else if(layer_type == "LRN") {
 		
@@ -502,7 +491,6 @@ int getLayerParams(const onnx::NodeProto& node_proto, std::string& params)
 			+ " " + std::to_string(beta)
 			+ " " + std::to_string(bias);
 
-		std::cout << "INFO: The parameters: " << lrn_local_size << " " << alpha << " " << beta << " " << bias << std::endl;
 	}
 	
 	return 0;
@@ -529,7 +517,6 @@ int parseOnnxGraph(
 
 	for(int i=0; i < graph_proto.node_size(); i++) {
 		const onnx::NodeProto node_proto = graph_proto.node(i);
-		std::cout << "INFO: Layer is : " << node_proto.op_type() << std::endl;
 		std::string params;
 		getLayerParams(node_proto, params);	
 
@@ -543,7 +530,6 @@ int parseOnnxGraph(
 		layer_details["output"] = layer_output;
 		layer_details["params"] = params;
 	
-		std::cout << "Input size is : " << node_proto.input_size() << std::endl;	
 		if(node_proto.input_size() > 1) {
 			std::string layer_weights = node_proto.input(1);
 			layer_details["weights"] = layer_weights;
