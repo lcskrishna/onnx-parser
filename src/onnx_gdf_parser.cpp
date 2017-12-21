@@ -267,6 +267,25 @@ int writeGDF
 			ofsGDF << "node org.khronos.nn_extension.activation_layer " << layer_input << " " << layer_output << "_mode" << " "
 				<< layer_output << "_param_a" << " " << layer_output << "_param_b" << " " << layer_output << std::endl; 	
 		}
+		else if(layer_type == "MaxPool") {
+			auto&& layer_params = layer_details.find("params")->second;
+			std::stringstream ss(layer_params);
+			int kernel_w, kernel_h, pad_w, pad_h, stride_w, stride_h;
+			ss >> kernel_w >> kernel_h >> stride_w >> stride_h >> pad_w >> pad_h;
+			
+			ofsGDF << "data " << layer_output << "_type = " << "scalar:VX_TYPE_ENUM,VX_NN_POOLING_MAX" << std::endl;
+			ofsGDF << "data " << layer_output << "_kernel_w = " << "scalar:VX_TYPE_SIZE," << kernel_w << std::endl;
+			ofsGDF << "data " << layer_output << "_kernel_h = " << "scalar:VX_TYPE_SIZE," << kernel_h << std::endl;
+			ofsGDF << "data " << layer_output << "_pad_w = " << "scalar:VX_TYPE_SIZE," << pad_w << std::endl;
+			ofsGDF << "data " << layer_output << "_pad_h = " << "scalar:VX_TYPE_SIZE," << pad_h << std::endl;
+			ofsGDF << "data " << layer_output << "_roundPolicy = " << "scalar:VX_TYPE_ENUM,VX_ROUND_POLICY_TO_NEAREST_EVEN" << std::endl;
+			ofsGDF << "node " << "org.khronos.nn_extension.pooling_layer " << layer_input << " " 
+					  << layer_output << "_type " << layer_output << "_kernel_w " << layer_output << "_kernel_h "
+					  << layer_output << "_pad_w " << layer_output << "_pad_h "
+					  << layer_output << "_roundPolicy"
+					  << " " << layer_output 
+					  << std::endl;
+		}
 	
 		if(i == net.size() - 1) {
 			ofsGDF << "write " << layer_output << " output.f32" << std::endl;
