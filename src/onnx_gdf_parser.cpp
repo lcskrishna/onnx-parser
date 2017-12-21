@@ -533,13 +533,11 @@ int parseOnnxGraph(
 		if(node_proto.input_size() > 1) {
 			std::string layer_weights = node_proto.input(1);
 			layer_details["weights"] = layer_weights;
-			std::cout << "Weights added " << std::endl;
 		}
 		
 		if(node_proto.input_size() > 2) {
 			std::string layer_bias = node_proto.input(2);
 			layer_details["bias"] = layer_bias;
-			std::cout << "Bias added is: " << layer_bias << std::endl;
 		}
 
 		net[i] = layer_details;
