@@ -286,6 +286,27 @@ int writeGDF
 					  << " " << layer_output 
 					  << std::endl;
 		}
+		else if(layer_type == "LRN") {
+			auto&& layer_params = layer_details.find("params")->second;
+			std::stringstream ss(layer_params);
+			int lrn_local_size;
+			float alpha, beta, bias;
+			ss >> lrn_local_size >> alpha >> beta >> bias;
+			
+			ofsGDF << "data " << layer_output << "_mode = " << "scalar:VX_TYPE_ENUM,VX_NN_NORMALIZATION_ACROSS_MAPS" << std::endl;
+			ofsGDF << "data " << layer_output << "_size = " << "scalar:VX_TYPE_SIZE," << lrn_local_size << std::endl;
+			ofsGDF << "data " << layer_output << "_alpha = " << "scalar:VX_TYPE_FLOAT32," << alpha << std::endl;
+			ofsGDF << "data " << layer_output << "_beta = " << "scalar:VX_TYPE_FLOAT32," << beta << std::endl;
+			ofsGDF << "data " << layer_output << "_bias = " << "scalar:VX_TYPE_FLOAT32," << bias << std::endl;
+			ofsGDF << "node org.khronos.nn_extension.normalization_layer " << layer_input << " "
+				<< layer_output << "_mode "
+				<< layer_output << "_size "
+				<< layer_output << "_alpha "
+				<< layer_output << "_beta "
+				<< layer_output << "_bias "
+				<< std::endl;
+		}
+		
 	
 		if(i == net.size() - 1) {
 			ofsGDF << "write " << layer_output << " output.f32" << std::endl;
