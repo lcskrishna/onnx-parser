@@ -338,6 +338,9 @@ int writeGDF
 			ofsGDF << "node org.khronos.nn_extension.convolution_layer " << layer_input << " " << layer_weights << " " << layer_bias
 				<< " " << layer_output << "_params" << " " << layer_output << std::endl; 	
 		}
+		else if(layer_type == "Dropout") {
+			ofsGDF << "node org.khronos.openvx.copy " << layer_input << " " << layer_output << std::endl;
+		}
 		
 		if(i == net.size() - 1) {
 			ofsGDF << "write " << layer_output << " output.f32" << std::endl;
