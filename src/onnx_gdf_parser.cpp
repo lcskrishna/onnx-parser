@@ -239,8 +239,8 @@ int writeGDF
 			std::string layer_bias;
 			if(layer_details.size() > 5) {
 				layer_bias = layer_details.find("bias")->second;
-				formatFileName(layer_bias, "/", "_");
 				auto& bias_dims = in_out_map.find(layer_bias)->second;
+				formatFileName(layer_bias, "/", "_");
 				ofsGDF << "data " << layer_bias << " = tensor:1{" << bias_dims[0] << "},VX_TYPE_FLOAT32,0" << std::endl;
 				ofsGDF << "init " << layer_bias << " weights/" << layer_bias << ".f32" << std::endl;
 			}
@@ -322,8 +322,8 @@ int writeGDF
 			std::string layer_bias;
 			if(layer_details.size() > 5) {
 				layer_bias = layer_details.find("bias")->second;
-				formatFileName(layer_bias, "/", "_");
 				std::vector<int> bias_dims = in_out_map.find(layer_bias)->second;
+				formatFileName(layer_bias, "/", "_");
 				ofsGDF << "data " << layer_bias << " = tensor:1{" << bias_dims[0] << "}, VX_TYPE_FLOAT32,0" << std::endl;
 				ofsGDF << "init " << layer_bias << " weights/" << layer_bias << ".f32" << std::endl;
 			}
