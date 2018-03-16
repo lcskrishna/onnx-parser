@@ -190,7 +190,7 @@ int writeGDF
 	auto&& layer_input = first_layer.find("input")->second;
 	auto& input_dims = first_layer_dims.find(layer_input)->second;
 	formatFileName(layer_input, "/", "_");
-	ofsGDF << "data " << layer_input << " = tensor:4{" << input_dims[3] << "," << input_dims[2] << "," << input_dims[1] << "," << input_dims[0] << "},"
+	ofsGDF << "data " << layer_input << " = tensor:4,{" << input_dims[3] << "," << input_dims[2] << "," << input_dims[1] << "," << input_dims[0] << "},"
 		<< "VX_TYPE_FLOAT32,0" << std::endl;
 	ofsGDF << "read " << layer_input << " input.f32" << std::endl;
 	
@@ -205,7 +205,7 @@ int writeGDF
 		//output dims.
 		auto& output_dims = in_out_map.find(layer_output)->second;
 		formatFileName(layer_output, "/", "_");
-		ofsGDF << "data " << layer_output << " = tensor:4{" << output_dims[3] << "," << output_dims[2] << "," << output_dims[1] << "," << output_dims[0] << "},"
+		ofsGDF << "data " << layer_output << " = tensor:4,{" << output_dims[3] << "," << output_dims[2] << "," << output_dims[1] << "," << output_dims[0] << "},"
 			<< "VX_TYPE_FLOAT32,0" << std::endl;
 
 		//TODO: Generate dims of layers and create nodes.
@@ -219,7 +219,7 @@ int writeGDF
 
 			if(layer_details.size() > 4) {
 				formatFileName(layer_weights, "/", "_");
-				ofsGDF << "data " << layer_weights << " = tensor:4{" << weight_dims[3] << "," << weight_dims[2] << "," << weight_dims[1] << "," 
+				ofsGDF << "data " << layer_weights << " = tensor:4,{" << weight_dims[3] << "," << weight_dims[2] << "," << weight_dims[1] << "," 
 					<< weight_dims[0] << "}," << "VX_TYPE_FLOAT32,0" << std::endl;
 				ofsGDF << "init " << layer_weights << " weights/" << layer_weights << ".f32" << std::endl;
 			}
@@ -229,12 +229,12 @@ int writeGDF
 				layer_bias = layer_details.find("bias")->second;
 				auto& bias_dims = in_out_map.find(layer_bias)->second;
 				formatFileName(layer_bias, "/", "_");
-				ofsGDF << "data " << layer_bias << " = tensor:1{" << bias_dims[0] << "},VX_TYPE_FLOAT32,0" << std::endl;
+				ofsGDF << "data " << layer_bias << " = tensor:1,{" << bias_dims[0] << "},VX_TYPE_FLOAT32,0" << std::endl;
 				ofsGDF << "init " << layer_bias << " weights/" << layer_bias << ".f32" << std::endl;
 			}
 			else if(layer_details.size() == 5) {
 				layer_bias = layer_output + "_b";
-				ofsGDF << "data " << layer_bias << " = tensor:1{" << weight_dims[0] << "},VX_TYPE_FLOAT32,0" << std::endl;
+				ofsGDF << "data " << layer_bias << " = tensor:1,{" << weight_dims[0] << "},VX_TYPE_FLOAT32,0" << std::endl;
 			}
 			
 			//conv params.
@@ -302,7 +302,7 @@ int writeGDF
 
 			if(layer_details.size() > 4) {
 				formatFileName(layer_weights, "/", "_");
-				ofsGDF << "data " << layer_weights << " =tensor:4{" << weight_dims[0] << "," << weight_dims[1] << "," << weight_dims[2]
+				ofsGDF << "data " << layer_weights << " =tensor:4,{" << weight_dims[0] << "," << weight_dims[1] << "," << weight_dims[2]
 					<< "," << weight_dims[3] << "}," << "VX_TYPE_FLOAT32,0" << std::endl;
 				ofsGDF << "init " << layer_weights << " weights/" << layer_weights << ".f32" << std::endl;
 			}
@@ -312,12 +312,12 @@ int writeGDF
 				layer_bias = layer_details.find("bias")->second;
 				std::vector<int> bias_dims = in_out_map.find(layer_bias)->second;
 				formatFileName(layer_bias, "/", "_");
-				ofsGDF << "data " << layer_bias << " = tensor:1{" << bias_dims[0] << "}, VX_TYPE_FLOAT32,0" << std::endl;
+				ofsGDF << "data " << layer_bias << " = tensor:1,{" << bias_dims[0] << "}, VX_TYPE_FLOAT32,0" << std::endl;
 				ofsGDF << "init " << layer_bias << " weights/" << layer_bias << ".f32" << std::endl;
 			}
 			else if(layer_details.size() == 5) {
 				layer_bias = layer_output + "_b";
-				ofsGDF << "data " << layer_bias << " = tensor:1{" << weight_dims[3] << "},VX_TYPE_FLOAT32,0" << std::endl;
+				ofsGDF << "data " << layer_bias << " = tensor:1,{" << weight_dims[3] << "},VX_TYPE_FLOAT32,0" << std::endl;
 			}
 
 			ofsGDF << "data " << layer_output << "_params = " << "scalar:VX_TYPE_NN_CONV_PARAMS,{" << pad_w << "," << pad_h << ","
