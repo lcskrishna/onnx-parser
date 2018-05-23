@@ -14,9 +14,7 @@ addons:
             -ubuntu-tool-chain-r-test
 
 before_install:
-    - wget   wget https://protobuf.googlecode.com/files/protobuf-2.4.1.tar.gz
-    - tar -xvzf protobuf-3.5.1.tar.gz
-    - cd protobuf-3.5.1 && ./configure && make && make install
+    - sudo apt-get install libprotobuf-dev protobuf-compiler
 
 branches:
     master
@@ -24,9 +22,8 @@ branches:
 before_script:
     - mkdir build
     - cd build
-    - cmake ..
 script :
-    - make
+    - cmake ..
 
     
 
