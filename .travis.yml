@@ -16,7 +16,7 @@ addons:
 before_install:
     - wget https://github.com/google/protobuf/archive/v3.5.1.zip
     - unzip v3.5.1.zip
-    - cd protobuf-3.5.1 && git submodule update --init --recursive && ./autogen.sh && ./configure && make && sudo make install
+    - cd protobuf-3.5.1 && git submodule update --init --recursive && ./autogen.sh && ./configure && make && sudo make install && cd ..
 
 branches:
     master
