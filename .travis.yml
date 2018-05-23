@@ -23,7 +23,7 @@ branches:
 before_script:
     - mkdir build
     - cd build
-    - cmake ../onnx-parser
+    - cmake ..
 
 script :
     - make
