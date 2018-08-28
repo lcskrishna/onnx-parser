@@ -39,6 +39,7 @@ list(APPEND SOURCES
 add_executable(onnx_gdf_parser ${SOURCES})
 target_link_libraries(onnx_gdf_parser ${PROTOBUF_LIBRARIES})
 
+
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
