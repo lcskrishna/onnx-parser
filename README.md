@@ -2,7 +2,7 @@
 
 # onnx-parser
 
-ONNX-Parser is a C++ Inference Code Generator tool that takes an [onnx](https://github.com/onnx/onnx) binary model and generates OpenVX [GDF](https://github.com/GPUOpen-ProfessionalCompute-Libraries/amdovx-core/tree/master/runvx) code for quick prototyping and kernel debugging.
+ONNX-Parser is a C++ Inference Code Generator tool that takes an [onnx](https://github.com/onnx/onnx) binary model and generates OpenVX [GDF](https://github.com/GPUOpen-ProfessionalCompute-Libraries/amdovx-core/tree/master/runvx#amd-runvx) code for quick prototyping and kernel debugging.
 
 The details of various OpenVX Kernels generated are from [vx_nn](https://github.com/GPUOpen-ProfessionalCompute-Libraries/amdovx-modules/tree/master/vx_nn)
 
